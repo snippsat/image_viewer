@@ -1,0 +1,767 @@
+{% extends "layout.html" %} {% block title %}Gallery | PixelView{% endblock %}
+{% block content %}
+
+<!-- Flash Messages -->
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div class="flash-messages">
+      {% for category, message in messages %}
+        <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show" role="alert" data-aos="fade-down">
+          <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<!-- Breadcrumb Navigation -->
+{% if breadcrumbs|length > 1 %}
+<nav aria-label="breadcrumb" data-aos="fade-down">
+  <ol class="breadcrumb">
+    {% for crumb in breadcrumbs %}
+      {% if loop.last %}
+        <li class="breadcrumb-item active" aria-current="page">{{ crumb.name }}</li>
+      {% else %}
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index', folder_path=crumb.path) if crumb.path else url_for('index') }}">{{ crumb.name }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}
+
+<div class="row mb-4 align-items-center" data-aos="fade-up">
+  <div class="col-md-6">
+    <h1 class="header-title mb-2">
+      {% if current_path %}
+        {{ current_path.split('/')[-1] }} Folder
+      {% else %}
+        Image Gallery
+      {% endif %}
+    </h1>
+    <p class="header-subtitle">View, manage, and enjoy your image collection</p>
+  </div>
+  <div class="col-md-6 text-end">
+    <div class="btn-group" role="group">
+      <button id="createFolderBtn" class="btn btn-outline-success me-2">
+        <i class="fas fa-folder-plus me-2"></i> New Folder
+      </button>
+      <a href="{{ url_for('upload_file') }}?folder={{ current_path }}" class="btn btn-primary">
+        <i class="fas fa-cloud-upload-alt me-2"></i> Upload Images
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- Create Folder Modal -->
+<div class="modal fade" id="createFolderModal" tabindex="-1" aria-labelledby="createFolderModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="createFolderModalLabel">
+          <i class="fas fa-folder-plus me-2"></i>Create New Folder
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="createFolderForm" action="{{ url_for('create_folder') }}" method="POST">
+        <div class="modal-body">
+          <input type="hidden" name="current_path" value="{{ current_path }}">
+          <div class="mb-3">
+            <label for="folderName" class="form-label">Folder Name</label>
+            <input type="text" class="form-control" id="folderName" name="folder_name" placeholder="Enter folder name..." required maxlength="100">
+            <div class="form-text">Use letters, numbers, spaces, hyphens, and underscores only.</div>
+            <div id="folderValidationMessage" class="invalid-feedback"></div>
+          </div>
+          <div class="text-muted small">
+            <i class="fas fa-info-circle me-2"></i>
+            The folder will be created in: 
+            <strong>{{ current_path if current_path else 'Gallery Root' }}</strong>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success" id="createFolderSubmit">
+            <i class="fas fa-folder-plus me-2"></i>Create Folder
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Folder Navigation -->
+{% if folders|length > 0 %}
+<div class="row mb-4">
+  <div class="col-12">
+    <h5 class="mb-3" data-aos="fade-right">
+      <i class="fas fa-folder me-2"></i>Folders
+    </h5>
+    <div class="row">
+      {% for folder in folders %}
+      <div class="col-md-3 mb-3" data-aos="fade-up" data-aos-delay="{{ loop.index * 50 }}">
+        <div class="card h-100 folder-card position-relative">
+          <!-- Folder delete button -->
+          <div class="folder-actions">
+            <button class="btn btn-sm btn-danger delete-folder-btn" 
+                    data-folder-name="{{ folder.name }}"
+                    data-folder-path="{{ folder.path }}"
+                    title="Delete folder">
+              <i class="fas fa-trash-alt"></i>
+            </button>
+          </div>
+          
+          <a href="{{ url_for('index', folder_path=folder.path) }}" class="text-decoration-none folder-link">
+            <div class="card-body text-center">
+              <i class="fas fa-folder fa-3x text-primary mb-3"></i>
+              <h6 class="card-title text-truncate">{{ folder.name }}</h6>
+              <small class="text-muted">{{ folder.image_count }} images</small>
+            </div>
+          </a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% if images|length == 0 and folders|length == 0 %}
+<div class="alert alert-info shadow-sm" data-aos="fade-up" data-aos-delay="100">
+  <div class="d-flex align-items-center">
+    <i class="fas fa-info-circle fa-2x me-3"></i>
+    <div>
+      <h5 class="mb-1">No images or folders found</h5>
+      <p class="mb-0">
+        Start by
+        <a href="{{ url_for('upload_file') }}?folder={{ current_path }}" class="alert-link">uploading some images</a>
+        to build your collection.
+      </p>
+    </div>
+  </div>
+</div>
+{% elif images|length == 0 %}
+<div class="alert alert-info shadow-sm" data-aos="fade-up" data-aos-delay="100">
+  <div class="d-flex align-items-center">
+    <i class="fas fa-info-circle fa-2x me-3"></i>
+    <div>
+      <h5 class="mb-1">No images in this folder</h5>
+      <p class="mb-0">
+        Start by
+        <a href="{{ url_for('upload_file') }}?folder={{ current_path }}" class="alert-link">uploading some images</a>
+        to this folder.
+      </p>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div class="image-count-badge" data-aos="fade-right" data-aos-delay="150">
+    <i class="fas fa-images me-2"></i> {{ images|length }} Images
+    {% if current_path %}in this folder{% endif %}
+  </div>
+  <div class="d-flex align-items-center" data-aos="fade-left" data-aos-delay="150">
+    <button id="bulkSelectModeBtn" class="btn btn-outline-info btn-lg me-3">
+      <i class="fas fa-check-square me-2"></i>
+      <span id="bulkSelectModeText">Bulk Select Mode</span>
+    </button>
+    <button id="selectAllBtn" class="btn btn-outline-primary btn-lg me-3" style="display: none;">
+      <i class="fas fa-check-square me-2"></i>
+      <span id="selectAllText">Select All</span>
+      <span id="selectedCount" class="badge bg-secondary ms-2" style="display: none;">0</span>
+    </button>
+    <button id="deleteAllBtn" class="btn btn-danger btn-lg" style="display: none;">
+      <i class="fas fa-trash-alt me-2"></i>
+      Delete Selected (<span id="deleteCount">0</span>)
+    </button>
+  </div>
+</div>
+
+<div class="row pswp-gallery" id="image-gallery">
+  {% for image in images %}
+  <div
+    class="col-md-3 gallery-item"
+    data-aos="fade-up"
+    data-aos-delay="{{ loop.index * 50 }}"
+    data-image-path="{{ image.relative_path }}"
+  >
+    <div class="card h-100 position-relative">
+      <!-- Bulk selection checkbox -->
+      <div class="bulk-select-checkbox" style="display: none;">
+        <input type="checkbox" class="form-check-input image-select-checkbox" 
+               data-image-path="{{ image.relative_path }}"
+               data-thumbnail="{{ image.thumbnail }}"
+               data-full-image="{{ image.full_image }}"
+               data-width="{{ image.width }}"
+               data-height="{{ image.height }}"
+               data-filename="{{ image.filename }}">
+      </div>
+      
+      <a
+        href="{{ url_for('static', filename=image.full_image) }}"
+        class="gallery-image-link position-relative"
+        data-pswp-width="{{ image.width }}"
+        data-pswp-height="{{ image.height }}"
+        data-cropped="true"
+        data-pswp-caption="{{ image.filename }}{% if image.folder %} ({{ image.folder }}){% endif %}"
+        target="_blank"
+      >
+        <img
+          src="{{ url_for('static', filename=image.thumbnail) }}"
+          class="card-img-top thumbnail"
+          alt="{{ image.filename }}"
+        />
+        <div class="card-img-overlay text-white">
+          <p class="mb-0">Click to view fullscreen</p>
+        </div>
+      </a>
+      <div class="img-actions">
+        <a
+          href="{{ url_for('delete_image', filename=image.relative_path) }}"
+          class="btn btn-sm btn-danger delete-btn"
+          onclick="event.stopPropagation(); return confirm('Are you sure you want to delete this image?');"
+        >
+          <i class="fas fa-trash-alt"></i>
+        </a>
+      </div>
+      <div class="card-body">
+        <p class="card-text text-truncate mb-0">{{ image.filename }}</p>
+        <small class="text-muted">
+          {{ image.width }}x{{ image.height }}
+          {% if image.folder %}
+            <br><i class="fas fa-folder me-1"></i>{{ image.folder }}
+          {% endif %}
+        </small>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+
+{% endblock %} 
+
+{% block scripts %}
+<style>
+.folder-card {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.folder-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
+}
+
+.folder-actions {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: none;
+  z-index: 10;
+}
+
+.folder-card:hover .folder-actions {
+  display: block;
+}
+
+.bulk-select-checkbox {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  padding: 5px;
+}
+
+.bulk-select-mode .gallery-image-link {
+  pointer-events: none;
+}
+
+.bulk-select-mode .card:hover {
+  transform: none;
+}
+
+.selected-image {
+  border: 3px solid var(--primary-color) !important;
+  transform: scale(0.95);
+}
+
+.flash-messages {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  max-width: 400px;
+}
+
+.modal-content {
+  background-color: var(--dark-secondary);
+  border: 1px solid var(--dark-tertiary);
+}
+
+.modal-header {
+  border-bottom: 1px solid var(--dark-tertiary);
+}
+
+.modal-footer {
+  border-top: 1px solid var(--dark-tertiary);
+}
+
+.form-control {
+  background-color: var(--dark-tertiary);
+  border-color: var(--dark-quaternary);
+  color: var(--text-color);
+}
+
+.form-control:focus {
+  background-color: var(--dark-tertiary);
+  border-color: var(--primary-color);
+  color: var(--text-color);
+  box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+}
+
+.form-label {
+  color: var(--text-color);
+}
+
+.btn-close {
+  filter: invert(1);
+}
+
+/* Bulk select mode button styling */
+#bulkSelectModeBtn {
+  font-weight: 600;
+  border-width: 2px;
+  transition: all 0.3s ease;
+}
+
+#bulkSelectModeBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#bulkSelectModeBtn.btn-info {
+  background-color: #17a2b8;
+  border-color: #17a2b8;
+  color: white;
+}
+
+#deleteAllBtn {
+  font-weight: 600;
+  border-width: 2px;
+  transition: all 0.3s ease;
+}
+
+#deleteAllBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+#deleteAllBtn.btn-warning {
+  background-color: #ffc107;
+  border-color: #ffc107;
+  color: #212529;
+}
+
+#selectAllBtn {
+  font-weight: 600;
+  border-width: 2px;
+  transition: all 0.3s ease;
+}
+
+#selectAllBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+</style>
+
+<script type="module">
+  document.addEventListener("DOMContentLoaded", () => {
+    // Initialize PhotoSwipe for this specific gallery
+    window.galleryInstance = window.initPhotoSwipe("#image-gallery");
+
+    // Folder creation functionality
+    const createFolderBtn = document.getElementById('createFolderBtn');
+    const createFolderModal = new bootstrap.Modal(document.getElementById('createFolderModal'));
+    const createFolderForm = document.getElementById('createFolderForm');
+    const folderNameInput = document.getElementById('folderName');
+    const folderValidationMessage = document.getElementById('folderValidationMessage');
+    const createFolderSubmit = document.getElementById('createFolderSubmit');
+
+    // Show create folder modal
+    createFolderBtn.addEventListener('click', function() {
+      createFolderModal.show();
+      setTimeout(() => folderNameInput.focus(), 500);
+    });
+
+    // Real-time folder name validation
+    let validationTimeout;
+    folderNameInput.addEventListener('input', function() {
+      clearTimeout(validationTimeout);
+      validationTimeout = setTimeout(validateFolderName, 300);
+    });
+
+    async function validateFolderName() {
+      const folderName = folderNameInput.value.trim();
+      
+      if (!folderName) {
+        setValidationState(false, '');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/folder/validate', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            folder_name: folderName,
+            current_path: '{{ current_path }}'
+          })
+        });
+
+        const data = await response.json();
+        setValidationState(data.valid, data.message);
+      } catch (error) {
+        console.error('Validation error:', error);
+        setValidationState(false, 'Validation error occurred');
+      }
+    }
+
+    function setValidationState(isValid, message) {
+      if (isValid) {
+        folderNameInput.classList.remove('is-invalid');
+        folderNameInput.classList.add('is-valid');
+        createFolderSubmit.disabled = false;
+      } else {
+        folderNameInput.classList.remove('is-valid');
+        if (message) {
+          folderNameInput.classList.add('is-invalid');
+          folderValidationMessage.textContent = message;
+          createFolderSubmit.disabled = true;
+        } else {
+          folderNameInput.classList.remove('is-invalid');
+          createFolderSubmit.disabled = folderNameInput.value.trim() === '';
+        }
+      }
+    }
+
+    // Handle form submission
+    createFolderForm.addEventListener('submit', function(e) {
+      createFolderSubmit.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Creating...';
+      createFolderSubmit.disabled = true;
+    });
+
+    // Folder deletion functionality
+    document.querySelectorAll('.delete-folder-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const folderName = this.dataset.folderName;
+        const folderPath = this.dataset.folderPath;
+        
+        if (confirm(`Are you sure you want to delete the folder "${folderName}" and all its contents?\n\nThis action cannot be undone!`)) {
+          // Show loading state
+          this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+          this.disabled = true;
+          
+          // Navigate to delete URL
+          window.location.href = `{{ url_for('delete_folder', folder_path='') }}${folderPath}`;
+        }
+      });
+    });
+
+    // Prevent folder link clicks when deleting
+    document.querySelectorAll('.folder-link').forEach(link => {
+      link.addEventListener('click', function(e) {
+        if (e.target.closest('.delete-folder-btn')) {
+          e.preventDefault();
+        }
+      });
+    });
+
+    // Auto-dismiss flash messages after 5 seconds
+    setTimeout(() => {
+      document.querySelectorAll('.alert').forEach(alert => {
+        const bsAlert = new bootstrap.Alert(alert);
+        bsAlert.close();
+      });
+    }, 5000);
+
+    // Bulk selection functionality
+    const bulkSelectModeBtn = document.getElementById('bulkSelectModeBtn');
+    const bulkSelectModeText = document.getElementById('bulkSelectModeText');
+    const selectAllBtn = document.getElementById('selectAllBtn');
+    const selectAllText = document.getElementById('selectAllText');
+    const selectedCount = document.getElementById('selectedCount');
+    const deleteAllBtn = document.getElementById('deleteAllBtn');
+    const deleteCount = document.getElementById('deleteCount');
+    const imageCheckboxes = document.querySelectorAll('.image-select-checkbox');
+    const bulkCheckboxes = document.querySelectorAll('.bulk-select-checkbox');
+    const galleryItems = document.querySelectorAll('.gallery-item');
+
+    let selectedImages = new Set();
+    let bulkSelectActive = false;
+
+    // Only initialize bulk selection if there are images
+    if (imageCheckboxes.length > 0) {
+      // Toggle bulk select mode
+      bulkSelectModeBtn.addEventListener('click', function() {
+        bulkSelectActive = !bulkSelectActive;
+        
+        if (bulkSelectActive) {
+          // Enable bulk select mode
+          bulkCheckboxes.forEach(checkbox => {
+            checkbox.style.display = 'block';
+          });
+          
+          selectAllBtn.style.display = 'inline-block';
+          deleteAllBtn.style.display = 'inline-block';
+          document.body.classList.add('bulk-select-mode');
+          
+          // Update button appearance
+          this.classList.remove('btn-outline-info');
+          this.classList.add('btn-info');
+          bulkSelectModeText.textContent = 'Exit Bulk Mode';
+        } else {
+          // Disable bulk select mode
+          bulkCheckboxes.forEach(checkbox => {
+            checkbox.style.display = 'none';
+          });
+          
+          selectAllBtn.style.display = 'none';
+          deleteAllBtn.style.display = 'none';
+          document.body.classList.remove('bulk-select-mode');
+          
+          // Update button appearance
+          this.classList.remove('btn-info');
+          this.classList.add('btn-outline-info');
+          bulkSelectModeText.textContent = 'Bulk Select Mode';
+          
+          // Unselect all images
+          selectedImages.clear();
+          updateSelectedCount();
+          imageCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            checkbox.closest('.gallery-item').classList.remove('selected-image');
+          });
+        }
+      });
+
+      // Handle individual image selection
+      imageCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+          const imagePath = this.dataset.imagePath;
+          const galleryItem = this.closest('.gallery-item');
+          
+          if (this.checked) {
+            selectedImages.add(imagePath);
+            galleryItem.classList.add('selected-image');
+          } else {
+            selectedImages.delete(imagePath);
+            galleryItem.classList.remove('selected-image');
+          }
+          
+          updateSelectedCount();
+        });
+      });
+
+      // Select all current images
+      selectAllBtn.addEventListener('click', function() {
+        const allSelected = selectedImages.size === imageCheckboxes.length;
+        
+        if (allSelected) {
+          // Unselect all
+          imageCheckboxes.forEach(checkbox => {
+            checkbox.checked = false;
+            selectedImages.delete(checkbox.dataset.imagePath);
+            checkbox.closest('.gallery-item').classList.remove('selected-image');
+          });
+        } else {
+          // Select all current images
+          imageCheckboxes.forEach(checkbox => {
+            checkbox.checked = true;
+            selectedImages.add(checkbox.dataset.imagePath);
+            checkbox.closest('.gallery-item').classList.add('selected-image');
+          });
+        }
+        
+        updateSelectedCount();
+      });
+
+      // Delete all selected images
+      deleteAllBtn.addEventListener('click', async function() {
+        if (selectedImages.size === 0) {
+          showNotification('No images selected for deletion', 'error');
+          return;
+        }
+
+        const confirmMessage = `Are you sure you want to delete ${selectedImages.size} selected image(s)?\n\nThis action cannot be undone!`;
+        if (!confirm(confirmMessage)) {
+          return;
+        }
+
+        // Show loading state
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Deleting...';
+        this.disabled = true;
+
+        try {
+          let deletedCount = 0;
+          const imagesToDelete = Array.from(selectedImages);
+          
+          // Delete images one by one
+          for (const imagePath of imagesToDelete) {
+            try {
+              const response = await fetch(`/delete/${imagePath}`, {
+                method: 'GET'
+              });
+              
+              if (response.ok) {
+                deletedCount++;
+                // Remove from DOM
+                const checkbox = document.querySelector(`[data-image-path="${imagePath}"]`);
+                if (checkbox) {
+                  const galleryItem = checkbox.closest('.gallery-item');
+                  if (galleryItem) {
+                    galleryItem.remove();
+                  }
+                }
+              }
+            } catch (error) {
+              console.error(`Error deleting ${imagePath}:`, error);
+            }
+          }
+
+          // Clear selection
+          selectedImages.clear();
+          updateSelectedCount();
+
+          if (deletedCount > 0) {
+            showNotification(`Successfully deleted ${deletedCount} image(s)`, 'success');
+            
+            // If no images left, exit bulk mode
+            if (document.querySelectorAll('.gallery-item').length === 0) {
+              bulkSelectModeBtn.click(); // Exit bulk mode
+            }
+          } else {
+            showNotification('No images were deleted', 'error');
+          }
+
+        } catch (error) {
+          console.error('Error during bulk deletion:', error);
+          showNotification('Error occurred during deletion', 'error');
+        } finally {
+          // Reset button
+          this.innerHTML = '<i class="fas fa-trash-alt me-2"></i>Delete Selected (<span id="deleteCount">' + selectedImages.size + '</span>)';
+          this.disabled = false;
+          // Update the deleteCount reference
+          const newDeleteCount = this.querySelector('#deleteCount');
+          if (newDeleteCount) {
+            deleteCount = newDeleteCount;
+          }
+        }
+      });
+
+      function updateSelectedCount() {
+        const count = selectedImages.size;
+        const currentCount = document.querySelectorAll('.image-select-checkbox').length;
+        
+        // Update select all button
+        if (count === 0) {
+          selectAllText.textContent = 'Select All';
+          selectedCount.style.display = 'none';
+        } else if (count === currentCount) {
+          selectAllText.textContent = 'Unselect All';
+          selectedCount.textContent = count;
+          selectedCount.style.display = 'inline';
+        } else {
+          selectAllText.textContent = 'Select All';
+          selectedCount.textContent = count;
+          selectedCount.style.display = 'inline';
+        }
+        
+        // Update delete all button
+        deleteCount.textContent = count;
+        if (count > 0) {
+          deleteAllBtn.classList.remove('btn-danger');
+          deleteAllBtn.classList.add('btn-warning');
+        } else {
+          deleteAllBtn.classList.remove('btn-warning');
+          deleteAllBtn.classList.add('btn-danger');
+        }
+      }
+    }
+
+    function showNotification(message, type) {
+      // Create a simple notification
+      const notification = document.createElement('div');
+      notification.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+      notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+      notification.innerHTML = `
+        <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+        ${message}
+      `;
+      
+      document.body.appendChild(notification);
+      
+      setTimeout(() => {
+        notification.remove();
+      }, 3000);
+    }
+
+    // Prevent delete button clicks from opening PhotoSwipe
+    document.querySelectorAll(".delete-btn").forEach((btn) => {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+    });
+
+    // Track touch events to prevent accidental deletions
+    let touchStartTime = 0;
+    let touchEndTime = 0;
+    let isSwiping = false;
+
+    document.addEventListener(
+      "touchstart",
+      function () {
+        touchStartTime = new Date().getTime();
+        isSwiping = false;
+      },
+      true
+    );
+
+    document.addEventListener(
+      "touchmove",
+      function () {
+        isSwiping = true;
+      },
+      true
+    );
+
+    document.addEventListener(
+      "touchend",
+      function () {
+        touchEndTime = new Date().getTime();
+        // If swipe duration is longer than 300ms, consider it a swipe
+        if (touchEndTime - touchStartTime > 300 || isSwiping) {
+          // Temporarily disable delete buttons
+          document.querySelectorAll(".delete-btn").forEach((btn) => {
+            btn.style.pointerEvents = "none";
+            setTimeout(() => {
+              btn.style.pointerEvents = "auto";
+            }, 500);
+          });
+        }
+      },
+      true
+    );
+  });
+</script>
+{% endblock %}

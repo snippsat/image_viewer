@@ -1,0 +1,403 @@
+{% extends "layout.html" %} {% block title %}Upload Images | PixelView{%
+endblock %} {% block head %}
+<style>
+  .drop-zone {
+    max-width: 100%;
+    height: 250px;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    font-weight: 500;
+    font-size: 20px;
+    cursor: pointer;
+    color: #94a3b8;
+    border: 3px dashed #cbd5e1;
+    border-radius: var(--border-radius);
+    margin-bottom: 20px;
+    transition: var(--transition);
+    background-color: var(--light-color);
+  }
+
+  .drop-zone--over {
+    border-color: var(--primary-color);
+    background-color: rgba(79, 70, 229, 0.05);
+  }
+
+  .drop-zone__input {
+    display: none;
+  }
+
+  .drop-zone__icon {
+    font-size: 50px;
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    transition: var(--transition);
+  }
+
+  .drop-zone:hover .drop-zone__icon {
+    transform: translateY(-5px);
+  }
+
+  .drop-zone__thumb {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    background-color: #f1f5f9;
+    background-size: cover;
+    position: relative;
+  }
+
+  .drop-zone__thumb::after {
+    content: attr(data-label);
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 8px 0;
+    color: #ffffff;
+    background: rgba(0, 0, 0, 0.75);
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .upload-card {
+    border-top: 5px solid var(--primary-color);
+  }
+
+  .upload-instructions {
+    background-color: #f8fafc;
+    border-radius: var(--border-radius);
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .upload-instruction-step {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 15px;
+  }
+
+  .upload-instruction-step:last-child {
+    margin-bottom: 0;
+  }
+
+  .step-number {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: linear-gradient(
+      to right,
+      var(--primary-color),
+      var(--secondary-color)
+    );
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 15px;
+    flex-shrink: 0;
+  }
+
+  .folder-info {
+    background-color: rgba(99, 102, 241, 0.1);
+    border: 1px solid var(--primary-color);
+    border-radius: var(--border-radius);
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+</style>
+{% endblock %} {% block content %}
+
+<!-- Breadcrumb Navigation -->
+{% if current_path %}
+<nav aria-label="breadcrumb" data-aos="fade-down">
+  <ol class="breadcrumb">
+    <li class="breadcrumb-item"><a href="{{ url_for('index') }}">Gallery</a></li>
+    {% set path_parts = current_path.split('/') %}
+    {% for part in path_parts %}
+      {% if loop.last %}
+        <li class="breadcrumb-item active" aria-current="page">{{ part }}</li>
+      {% else %}
+        {% set partial_path = path_parts[:loop.index]|join('/') %}
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index', folder_path=partial_path) }}">{{ part }}</a>
+        </li>
+      {% endif %}
+    {% endfor %}
+  </ol>
+</nav>
+{% endif %}
+
+<div class="row mb-4 align-items-center" data-aos="fade-up">
+  <div class="col-md-8">
+    <h1 class="header-title mb-2">Upload Images</h1>
+    <p class="header-subtitle">
+      {% if current_path %}
+        Add new images to the "{{ current_path.split('/')[-1] }}" folder
+      {% else %}
+        Add new images to your collection
+      {% endif %}
+    </p>
+  </div>
+  <div class="col-md-4 text-end">
+    {% if current_path %}
+      <a href="{{ url_for('index', folder_path=current_path) }}" class="btn btn-outline-primary">
+        <i class="fas fa-arrow-left me-2"></i> Back to {{ current_path.split('/')[-1] }}
+      </a>
+    {% else %}
+      <a href="{{ url_for('index') }}" class="btn btn-outline-primary">
+        <i class="fas fa-arrow-left me-2"></i> Back to Gallery
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Folder information -->
+{% if current_path %}
+<div class="folder-info" data-aos="fade-up" data-aos-delay="50">
+  <div class="d-flex align-items-center">
+    <i class="fas fa-folder fa-2x text-primary me-3"></i>
+    <div>
+      <h6 class="mb-1">Uploading to folder: <strong>{{ current_path }}</strong></h6>
+      <p class="mb-0 text-muted">Images will be saved in this specific folder location</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="row">
+  <div class="col-md-8" data-aos="fade-up" data-aos-delay="100">
+    <div class="card upload-card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-cloud-upload-alt me-2"></i> Upload Your Images
+        </h5>
+      </div>
+      <div class="card-body">
+        <form
+          action="{{ url_for('upload_file', folder=current_path) if current_path else url_for('upload_file') }}"
+          method="post"
+          enctype="multipart/form-data"
+          id="uploadForm"
+        >
+          <!-- Hidden field for folder path -->
+          {% if current_path %}
+            <input type="hidden" name="folder_path" value="{{ current_path }}">
+          {% endif %}
+          
+          <div class="drop-zone">
+            <i class="fas fa-file-image drop-zone__icon"></i>
+            <span class="drop-zone__prompt"
+              >Drop image files here or click to upload</span
+            >
+            <span class="text-muted small mt-2">Maximum file size: 16MB</span>
+            <input
+              type="file"
+              name="file"
+              class="drop-zone__input"
+              accept="image/*"
+              multiple
+            />
+          </div>
+
+          <div class="d-grid gap-2">
+            <button type="submit" class="btn btn-primary" id="submitBtn">
+              <i class="fas fa-cloud-upload-alt me-2"></i> Upload Images
+            </button>
+            {% if current_path %}
+              <a href="{{ url_for('index', folder_path=current_path) }}" class="btn btn-outline-secondary">Cancel</a>
+            {% else %}
+              <a href="{{ url_for('index') }}" class="btn btn-outline-secondary">Cancel</a>
+            {% endif %}
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-4" data-aos="fade-up" data-aos-delay="200">
+    <div class="card">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-info-circle me-2"></i> Upload Instructions
+        </h5>
+      </div>
+      <div class="card-body">
+        <div class="upload-instructions">
+          <div class="upload-instruction-step">
+            <div class="step-number">1</div>
+            <div>
+              <h6>Select Images</h6>
+              <p class="text-muted small mb-0">
+                Click on the upload area or drag and drop your image files.
+              </p>
+            </div>
+          </div>
+          <div class="upload-instruction-step">
+            <div class="step-number">2</div>
+            <div>
+              <h6>Choose Multiple Files</h6>
+              <p class="text-muted small mb-0">
+                You can select multiple images at once for upload.
+              </p>
+            </div>
+          </div>
+          <div class="upload-instruction-step">
+            <div class="step-number">3</div>
+            <div>
+              <h6>Click Upload</h6>
+              <p class="text-muted small mb-0">
+                Press the Upload button to add images to 
+                {% if current_path %}
+                  the "{{ current_path.split('/')[-1] }}" folder.
+                {% else %}
+                  your gallery.
+                {% endif %}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <h6>Supported Formats</h6>
+        <div class="list-group list-group-flush">
+          <div class="list-group-item d-flex justify-content-between">
+            <span><i class="fas fa-image me-2"></i>JPEG</span>
+            <span class="badge bg-light">✓</span>
+          </div>
+          <div class="list-group-item d-flex justify-content-between">
+            <span><i class="fas fa-image me-2"></i>PNG</span>
+            <span class="badge bg-light">✓</span>
+          </div>
+          <div class="list-group-item d-flex justify-content-between">
+            <span><i class="fas fa-image me-2"></i>GIF</span>
+            <span class="badge bg-light">✓</span>
+          </div>
+          <div class="list-group-item d-flex justify-content-between">
+            <span><i class="fas fa-image me-2"></i>WebP</span>
+            <span class="badge bg-light">✓</span>
+          </div>
+          <div class="list-group-item d-flex justify-content-between">
+            <span><i class="fas fa-image me-2"></i>BMP</span>
+            <span class="badge bg-light">✓</span>
+          </div>
+          <div class="list-group-item d-flex justify-content-between">
+            <span><i class="fas fa-image me-2"></i>TIFF</span>
+            <span class="badge bg-light">✓</span>
+          </div>
+        </div>
+
+        <div class="mt-3">
+          <h6>Tips</h6>
+          <ul class="list-unstyled text-muted small">
+            <li><i class="fas fa-lightbulb me-2"></i>Drag and drop multiple images for faster uploads</li>
+            <li><i class="fas fa-lightbulb me-2"></i>Thumbnails are automatically generated</li>
+            {% if current_path %}
+              <li><i class="fas fa-lightbulb me-2"></i>Images will be organized in the "{{ current_path.split('/')[-1] }}" folder</li>
+            {% else %}
+              <li><i class="fas fa-lightbulb me-2"></i>Create folders to organize your images</li>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const uploadForm = document.getElementById("uploadForm");
+    const submitBtn = document.getElementById("submitBtn");
+
+    // Handle form submission
+    uploadForm.addEventListener("submit", function (e) {
+      const fileInput = document.querySelector(".drop-zone__input");
+      if (fileInput.files.length > 0) {
+        submitBtn.innerHTML =
+          '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Uploading...';
+        submitBtn.disabled = true;
+      }
+    });
+
+    // Handle drop zone
+    document.querySelectorAll(".drop-zone__input").forEach((inputElement) => {
+      const dropZoneElement = inputElement.closest(".drop-zone");
+
+      dropZoneElement.addEventListener("click", (e) => {
+        inputElement.click();
+      });
+
+      inputElement.addEventListener("change", (e) => {
+        if (inputElement.files.length) {
+          updateThumbnail(dropZoneElement, inputElement.files[0]);
+        }
+      });
+
+      dropZoneElement.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZoneElement.classList.add("drop-zone--over");
+      });
+
+      ["dragleave", "dragend"].forEach((type) => {
+        dropZoneElement.addEventListener(type, (e) => {
+          dropZoneElement.classList.remove("drop-zone--over");
+        });
+      });
+
+      dropZoneElement.addEventListener("drop", (e) => {
+        e.preventDefault();
+
+        if (e.dataTransfer.files.length) {
+          inputElement.files = e.dataTransfer.files;
+          updateThumbnail(dropZoneElement, e.dataTransfer.files[0]);
+        }
+
+        dropZoneElement.classList.remove("drop-zone--over");
+      });
+    });
+
+    /**
+     * Updates the thumbnail on a drop zone element.
+     *
+     * @param {HTMLElement} dropZoneElement
+     * @param {File} file
+     */
+    function updateThumbnail(dropZoneElement, file) {
+      let thumbnailElement = dropZoneElement.querySelector(".drop-zone__thumb");
+      const prompt = dropZoneElement.querySelector(".drop-zone__prompt");
+      const icon = dropZoneElement.querySelector(".drop-zone__icon");
+      const smallText = dropZoneElement.querySelector(".small");
+
+      // First time - remove the prompt
+      if (!thumbnailElement) {
+        // Hide the icon and text
+        if (prompt) prompt.style.display = "none";
+        if (icon) icon.style.display = "none";
+        if (smallText) smallText.style.display = "none";
+
+        thumbnailElement = document.createElement("div");
+        thumbnailElement.classList.add("drop-zone__thumb");
+        dropZoneElement.appendChild(thumbnailElement);
+      }
+
+      thumbnailElement.dataset.label = file.name;
+
+      // Show thumbnail for image files
+      if (file.type.startsWith("image/")) {
+        const reader = new FileReader();
+
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          thumbnailElement.style.backgroundImage = `url('${reader.result}')`;
+        };
+      } else {
+        thumbnailElement.style.backgroundImage = null;
+      }
+    }
+  });
+</script>
+{% endblock %}

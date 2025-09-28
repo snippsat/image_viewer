@@ -1,0 +1,156 @@
+{% extends "layout.html" %} {% block title %}{{ filename }} | PixelView{%
+endblock %} {% block content %}
+<div class="row" data-aos="fade-up">
+  <div class="col-md-12">
+    <nav aria-label="breadcrumb">
+      <ol class="breadcrumb mb-0">
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('index') }}"
+            ><i class="fas fa-images me-1"></i> Gallery</a
+          >
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">
+          {{ filename }}
+        </li>
+      </ol>
+    </nav>
+  </div>
+</div>
+
+<div class="row mt-4">
+  <div class="col-md-9" data-aos="fade-up" data-aos-delay="100">
+    <div class="card">
+      <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+          <h5 class="mb-0"><i class="fas fa-image me-2"></i> Image Preview</h5>
+          <a
+            href="{{ url_for('index') }}"
+            class="btn btn-sm btn-outline-primary"
+          >
+            <i class="fas fa-arrow-left me-1"></i> Back to Gallery
+          </a>
+        </div>
+      </div>
+      <div class="card-body text-center pswp-single-gallery" id="single-image">
+        <a
+          href="{{ url_for('static', filename=('uploads/' + filename)) }}"
+          class="gallery-image-link position-relative"
+          data-pswp-width="{{ width }}"
+          data-pswp-height="{{ height }}"
+          data-pswp-caption="{{ filename }}"
+          target="_blank"
+        >
+          <img
+            src="{{ url_for('static', filename=('uploads/' + filename)) }}"
+            class="img-fluid rounded shadow-sm"
+            alt="{{ filename }}"
+          />
+          <div
+            class="position-absolute top-0 start-0 end-0 bottom-0 d-flex justify-content-center align-items-center"
+            style="
+              background-color: rgba(0, 0, 0, 0.2);
+              opacity: 0;
+              transition: opacity 0.3s;
+              border-radius: 0.5rem;
+            "
+          >
+            <div class="text-white text-center">
+              <i class="fas fa-search-plus fa-3x mb-2"></i>
+              <p>Click to view fullscreen</p>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3" data-aos="fade-up" data-aos-delay="200">
+    <div class="card h-100">
+      <div class="card-header">
+        <h5 class="mb-0">
+          <i class="fas fa-info-circle me-2"></i> Image Details
+        </h5>
+      </div>
+      <div class="card-body">
+        <h5 class="card-title text-truncate">{{ filename }}</h5>
+
+        <ul class="list-group list-group-flush mb-4">
+          <li
+            class="list-group-item d-flex justify-content-between align-items-center px-0"
+          >
+            <span><i class="fas fa-ruler me-2"></i> Dimensions</span>
+            <span class="badge bg-light text-dark"
+              >{{ width }} x {{ height }} px</span
+            >
+          </li>
+          <li
+            class="list-group-item d-flex justify-content-between align-items-center px-0"
+          >
+            <span><i class="fas fa-image me-2"></i> Type</span>
+            <span class="badge bg-light text-dark"
+              >{{ filename.split('.')[-1]|upper }}</span
+            >
+          </li>
+        </ul>
+
+        <div class="d-grid gap-2">
+          <a
+            href="{{ url_for('static', filename=('uploads/' + filename)) }}"
+            class="btn btn-primary"
+            download
+          >
+            <i class="fas fa-download me-2"></i> Download
+          </a>
+          <a
+            href="{{ url_for('delete_image', filename=filename) }}"
+            class="btn btn-danger delete-btn"
+            onclick="return confirm('Are you sure you want to delete this image? This action cannot be undone.');"
+          >
+            <i class="fas fa-trash-alt me-2"></i> Delete
+          </a>
+        </div>
+
+        <div class="alert alert-info mt-4 small mb-0">
+          <i class="fas fa-info-circle me-2"></i> Click on the image to view it
+          in fullscreen mode.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script type="module">
+  document.addEventListener("DOMContentLoaded", () => {
+    // Initialize PhotoSwipe for the single image view
+    window.singleImageGallery = window.initPhotoSwipe(".pswp-single-gallery");
+
+    // Add hover effect for the fullscreen overlay
+    const imageLink = document.querySelector(".pswp-single-gallery a");
+    if (imageLink) {
+      const overlay = imageLink.querySelector(".position-absolute");
+
+      imageLink.addEventListener("mouseenter", function () {
+        if (overlay) overlay.style.opacity = "1";
+      });
+
+      imageLink.addEventListener("mouseleave", function () {
+        if (overlay) overlay.style.opacity = "0";
+      });
+
+      imageLink.addEventListener("click", function (e) {
+        e.preventDefault();
+        // Add slight delay to ensure everything is initialized
+        setTimeout(() => {
+          window.singleImageGallery.loadAndOpen(0);
+        }, 100);
+      });
+    }
+
+    // Prevent the delete button from interacting with PhotoSwipe
+    document
+      .querySelector(".delete-btn")
+      ?.addEventListener("click", function (e) {
+        e.stopPropagation();
+      });
+  });
+</script>
+{% endblock %}
