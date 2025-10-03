@@ -15,7 +15,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['THUMBNAILS_FOLDER'] = THUMBNAILS_FOLDER
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload size
+app.config['MAX_CONTENT_LENGTH'] = 200 * 1024 * 1024  # 200MB max upload size for bulk uploads
 app.secret_key = 'your-secret-key-here'  # Required for flash messages
 
 # Create directories if they don't exist
@@ -195,18 +195,15 @@ def upload_file():
         for file in files:
             if file.filename == '':
                 continue
-
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 file_path = os.path.join(upload_dir, filename)
                 file.save(file_path)
-
                 # Create thumbnail with proper naming for folder structure
                 relative_path = os.path.join(folder_path, filename).replace('\\', '/') if folder_path else filename
                 thumbnail_filename = relative_path.replace('/', '_')
                 thumbnail_path = os.path.join(app.config['THUMBNAILS_FOLDER'], thumbnail_filename)
-                create_thumbnail(file_path, thumbnail_path)
-                
+                create_thumbnail(file_path, thumbnail_path)                
                 uploaded_count += 1
     
         if uploaded_count > 0:

@@ -34,25 +34,35 @@
 {% endif %}
 
 <div class="row mb-4 align-items-center" data-aos="fade-up">
-  <div class="col-md-6">
-    <h1 class="header-title mb-2">
+  <div class="col-md-12 text-center">
+    <h1 class="header-title mb-3">
       {% if current_path %}
         {{ current_path.split('/')[-1] }} Folder
       {% else %}
         Image Gallery
       {% endif %}
     </h1>
+    {% if images|length > 0 %}
+    <div class="mb-2">
+      <span class="image-count-badge" data-aos="zoom-in" data-aos-delay="200">
+        <i class="fas fa-images me-2"></i>{{ images|length }} Images{% if current_path %} in this folder{% endif %}
+      </span>
+    </div>
+    {% endif %}
     <p class="header-subtitle">View, manage, and enjoy your image collection</p>
   </div>
+</div>
+
+<div class="row mb-4 align-items-center">
+  <div class="col-md-6">
+    <button id="createFolderBtn" class="btn btn-outline-success me-2">
+      <i class="fas fa-folder-plus me-2"></i> New Folder
+    </button>
+  </div>
   <div class="col-md-6 text-end">
-    <div class="btn-group" role="group">
-      <button id="createFolderBtn" class="btn btn-outline-success me-2">
-        <i class="fas fa-folder-plus me-2"></i> New Folder
-      </button>
-      <a href="{{ url_for('upload_file') }}?folder={{ current_path }}" class="btn btn-primary">
-        <i class="fas fa-cloud-upload-alt me-2"></i> Upload Images
-      </a>
-    </div>
+    <a href="{{ url_for('upload_file') }}?folder={{ current_path }}" class="btn btn-primary">
+      <i class="fas fa-cloud-upload-alt me-2"></i> Upload Images
+    </a>
   </div>
 </div>
 
@@ -157,12 +167,8 @@
   </div>
 </div>
 {% else %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-  <div class="image-count-badge" data-aos="fade-right" data-aos-delay="150">
-    <i class="fas fa-images me-2"></i> {{ images|length }} Images
-    {% if current_path %}in this folder{% endif %}
-  </div>
-  <div class="d-flex align-items-center" data-aos="fade-left" data-aos-delay="150">
+<div class="d-flex justify-content-start align-items-center mb-4">
+  <div class="d-flex align-items-center" data-aos="fade-right" data-aos-delay="150">
     <button id="bulkSelectModeBtn" class="btn btn-outline-info btn-lg me-3">
       <i class="fas fa-check-square me-2"></i>
       <span id="bulkSelectModeText">Bulk Select Mode</span>
