@@ -9,6 +9,9 @@ Flask-based image viewer with folder support and thumbnail generation.
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
 ```
 
+### 1. Install UV (Linux)  
+curl -LsSf https://astral.sh/uv/install.sh | sh  
+
 ### 2. Setup Environment
 ```bash
 # Create virtual environment
