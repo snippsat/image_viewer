@@ -58,8 +58,7 @@ def get_folders_in_path(path):
                     'name': item,
                     'path': os.path.join(path, item).replace('\\', '/') if path else item,
                     'image_count': image_count
-                })
-    
+                })    
     return folders
 
 def count_images_in_folder(folder_path):
@@ -71,8 +70,7 @@ def count_images_in_folder(folder_path):
         for root, dirs, files in os.walk(full_path):
             for file in files:
                 if allowed_file(file):
-                    count += 1
-    
+                    count += 1    
     return count
 
 def get_breadcrumbs(current_path):
@@ -84,17 +82,14 @@ def get_breadcrumbs(current_path):
         path = ''
         for part in parts:
             path = os.path.join(path, part).replace('\\', '/') if path else part
-            breadcrumbs.append({'name': part, 'path': path})
-    
+            breadcrumbs.append({'name': part, 'path': path})    
     return breadcrumbs
 
 def validate_folder_name(name):
     """Validate folder name"""
     if not name or not name.strip():
-        return False, "Folder name cannot be empty"
-    
-    name = name.strip()
-    
+        return False, "Folder name cannot be empty"    
+    name = name.strip()    
     if len(name) > 100:
         return False, "Folder name too long (max 100 characters)"
     
@@ -103,10 +98,10 @@ def validate_folder_name(name):
         return False, "Folder name can only contain letters, numbers, spaces, hyphens, and underscores"
     
     # Check for reserved names
-    reserved_names = ['con', 'prn', 'aux', 'nul', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9', 'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9']
+    reserved_names = ['con', 'prn', 'aux', 'nul', 'com1', 'com2', 'com3', 'com4', 'com5', 'com6', 'com7', 'com8', 'com9',
+                      'lpt1', 'lpt2', 'lpt3', 'lpt4', 'lpt5', 'lpt6', 'lpt7', 'lpt8', 'lpt9']
     if name.lower() in reserved_names:
-        return False, "This folder name is reserved by the system"
-    
+        return False, "This folder name is reserved by the system"    
     return True, ""
 
 @app.route('/')
@@ -122,8 +117,7 @@ def index(folder_path=''):
     # Ensure the path exists
     if not os.path.exists(full_path):
         flash('Folder not found', 'error')
-        return redirect(url_for('index'))
-    
+        return redirect(url_for('index'))    
     # Get folders in current path
     folders = get_folders_in_path(current_path)
     
@@ -134,17 +128,13 @@ def index(folder_path=''):
             if os.path.isfile(file_path) and allowed_file(filename):
                 # Create relative paths for thumbnails
                 relative_image_path = os.path.join(current_path, filename).replace('\\', '/') if current_path else filename
-                thumbnail_filename = relative_image_path.replace('/', '_')
-                
-                thumbnail_path = os.path.join(app.config['THUMBNAILS_FOLDER'], thumbnail_filename)
-                
+                thumbnail_filename = relative_image_path.replace('/', '_')                
+                thumbnail_path = os.path.join(app.config['THUMBNAILS_FOLDER'], thumbnail_filename)                
                 # Create thumbnail if it doesn't exist
                 if not os.path.exists(thumbnail_path):
                     create_thumbnail(file_path, thumbnail_path)
-
                 # Get image dimensions for PhotoSwipe
                 width, height = get_image_dimensions(file_path)
-
                 images.append({
                     'filename': filename,
                     'relative_path': relative_image_path,
@@ -156,8 +146,7 @@ def index(folder_path=''):
                 })
 
     # Generate breadcrumbs
-    breadcrumbs = get_breadcrumbs(current_path)
-    
+    breadcrumbs = get_breadcrumbs(current_path)    
     return render_template('index.html', 
                          images=images, 
                          folders=folders,
@@ -204,8 +193,7 @@ def upload_file():
                 thumbnail_filename = relative_path.replace('/', '_')
                 thumbnail_path = os.path.join(app.config['THUMBNAILS_FOLDER'], thumbnail_filename)
                 create_thumbnail(file_path, thumbnail_path)                
-                uploaded_count += 1
-    
+                uploaded_count += 1    
         if uploaded_count > 0:
                 flash(f'Successfully uploaded {uploaded_count} image(s)', 'success')
         else:
@@ -216,7 +204,6 @@ def upload_file():
             return redirect(url_for('index', folder_path=folder_path))
         else:
             return redirect(url_for('index'))
-
     return render_template('upload.html', current_path=folder_path)
 
 @app.route('/image/<path:filename>')
@@ -292,8 +279,7 @@ def create_folder():
 @app.route('/delete_folder/<path:folder_path>')
 def delete_folder(folder_path):
     """Delete a folder and all its contents"""
-    full_path = os.path.join(app.config['UPLOAD_FOLDER'], folder_path)
-    
+    full_path = os.path.join(app.config['UPLOAD_FOLDER'], folder_path)    
     if os.path.exists(full_path) and os.path.isdir(full_path):
         try:
             # Remove all thumbnails for images in this folder
@@ -352,8 +338,7 @@ def validate_folder_api():
 def get_all_images_api(folder_path=''):
     """API endpoint to get all images including subfolders"""
     images = []
-    base_path = os.path.join(app.config['UPLOAD_FOLDER'], folder_path) if folder_path else app.config['UPLOAD_FOLDER']
-    
+    base_path = os.path.join(app.config['UPLOAD_FOLDER'], folder_path) if folder_path else app.config['UPLOAD_FOLDER']    
     if os.path.exists(base_path):
         for root, dirs, files in os.walk(base_path):
             for file in files:
@@ -375,8 +360,7 @@ def get_all_images_api(folder_path=''):
                         'width': width,
                         'height': height,
                         'folder': os.path.dirname(relative_path) if os.path.dirname(relative_path) else None
-                    })
-    
+                    })    
     return jsonify({
         'images': images,
         'count': len(images)

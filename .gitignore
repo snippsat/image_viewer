@@ -275,8 +275,8 @@ coverage.xml
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
-# pyenv
-.python-version
+# pyenv (commented out - we track .python-version for uv)
+# .python-version
 
 # Local development
 .local/
